@@ -3689,11 +3689,16 @@ function classifyParlayFailure(error,responseStatus=null){
   }
   if(/failed to fetch|networkerror|load failed|cors/i.test(msg)){
     const direct=/^https?:\/\/parlay-api\.com\//i.test(parlayOddsEndpoint());
+    // NOTE: A browser reports "Failed to fetch" for BOTH a true CORS block AND for a server
+    // error page that lacks CORS headers. We have verified CORS is correctly configured when
+    // ParlayAPI is healthy (the /sports endpoint loads fine from the browser). So in practice
+    // this almost always means ParlayAPI's odds server is returning a temporary 5xx error whose
+    // error page drops the CORS header - i.e. a provider-side outage, NOT a config problem here.
     return {
-      code:"CORS_OR_NETWORK",
+      code:"PROVIDER_UNAVAILABLE_OR_CORS",
       message:direct
-        ?"The browser could not call ParlayAPI directly. Use a same-origin proxy ending in /v1, or enable CORS on the API gateway."
-        :"The browser could not complete the ParlayAPI request. Check the proxy, network access, and configured API Base URL."
+        ?"Could not reach ParlayAPI's odds server - it is most likely returning a temporary error right now (their error pages drop the CORS header, so the browser shows this as a connection failure). Your key and setup are fine; wait a moment and try again."
+        :"Could not complete the ParlayAPI request. If you are using a proxy, check it is running; otherwise the provider may be temporarily unavailable - wait a moment and retry."
     };
   }
   return {code:"PROVIDER_ERROR",message:msg||"ParlayAPI request failed for an unknown reason."};
@@ -3805,7 +3810,7 @@ async function parlayFetchJson(params={},signal,options={}){
   // We transparently retry these transient failures with a short linear backoff so a single
   // unlucky click doesn't surface as a hard error to the user. Permanent errors (bad key, bad
   // params) are NOT retried - see isRetryableParlayError().
-  const maxAttempts=Math.max(1,Number(options.maxAttempts)||4);
+  const maxAttempts=Math.max(1,Number(options.maxAttempts)||5);
   const baseDelayMs=Math.max(0,Number(options.retryDelayMs)||800);
   let lastError=null;
   for(let attempt=1;attempt<=maxAttempts;attempt++){
