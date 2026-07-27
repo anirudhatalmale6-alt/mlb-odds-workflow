@@ -239,9 +239,12 @@ pre{white-space:pre-wrap}
         <label class="label">API Key</label>
         <input id="parlayApiKey" type="password" placeholder="Enter your ParlayAPI API key">
         <div class="small muted" style="margin-top:6px">
-          The key stays in the browser session and is not stored inside the HTML file.
-          Authentication uses the documented <code>X-API-Key</code> header.
+          Authentication uses the documented <code>X-API-Key</code> header. The key is never stored inside the HTML file.
         </div>
+        <label class="small" style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer">
+          <input type="checkbox" id="rememberParlayKey">
+          Remember my key on this device (saved only in this browser, so you don't have to re-enter it each time)
+        </label>
         <label class="label" style="display:block;margin-top:10px">API Base URL</label>
         <input id="parlayApiBaseUrl" value="https://parlay-proxy.mlb-odds-parlay.workers.dev/v1" spellcheck="false">
         <div class="small muted" style="margin-top:6px">
@@ -6015,9 +6018,29 @@ function bindCoreFrameworkUI(){
   qs("configRetryAttempts").value=AppConfig.get("network.retryAttempts");
   qs("configAutoTransfer").checked=AppConfig.get("connectors.autoTransfer");
   qs("configPersistState").checked=AppConfig.get("state.persist");
-  const configuredParlayKey=String(AppConfig.get("odds.apiKey")||"");
-  if(configuredParlayKey)qs("parlayApiKey").value=configuredParlayKey;
-  qs("parlayApiKey").addEventListener("input",event=>setParlayApiKey(event.target.value,"ParlayAPI:key-input"));
+  // Optional "remember my key on this device": stores the key in this browser's localStorage
+  // (opt-in via the checkbox) so the user doesn't have to paste it every time they open the app.
+  // It is still never written into the HTML file itself, and can be cleared by unticking the box.
+  const REMEMBER_PARLAY_KEY="mlbWorkflow.parlayApiKey.v1";
+  const readRememberedKey=()=>{try{return localStorage.getItem(REMEMBER_PARLAY_KEY)||"";}catch(_){return "";}};
+  const persistParlayKeyMaybe=()=>{
+    try{
+      if(qs("rememberParlayKey")&&qs("rememberParlayKey").checked){
+        localStorage.setItem(REMEMBER_PARLAY_KEY,String(qs("parlayApiKey").value||"").trim());
+      }else{
+        localStorage.removeItem(REMEMBER_PARLAY_KEY);
+      }
+    }catch(_){}
+  };
+  const rememberedKey=readRememberedKey();
+  const configuredParlayKey=rememberedKey||String(AppConfig.get("odds.apiKey")||"");
+  if(qs("rememberParlayKey"))qs("rememberParlayKey").checked=!!rememberedKey;
+  if(configuredParlayKey){
+    qs("parlayApiKey").value=configuredParlayKey;
+    setParlayApiKey(configuredParlayKey,"ParlayAPI:remembered");
+  }
+  qs("parlayApiKey").addEventListener("input",event=>{setParlayApiKey(event.target.value,"ParlayAPI:key-input");persistParlayKeyMaybe();});
+  if(qs("rememberParlayKey"))qs("rememberParlayKey").addEventListener("change",persistParlayKeyMaybe);
 
   qs("saveCoreConfig").onclick=()=>{
     AppConfig.set("app.defaultSlateOffsetDays",Number(qs("configSlateOffset").value),{source:"CoreUI"});
