@@ -243,7 +243,7 @@ pre{white-space:pre-wrap}
           Authentication uses the documented <code>X-API-Key</code> header.
         </div>
         <label class="label" style="display:block;margin-top:10px">API Base URL</label>
-        <input id="parlayApiBaseUrl" value="https://parlay-api.com/v1" spellcheck="false">
+        <input id="parlayApiBaseUrl" value="https://parlay-proxy.mlb-odds-parlay.workers.dev/v1" spellcheck="false">
         <div class="small muted" style="margin-top:6px">
           Use the official URL above, or a same-origin proxy ending in <code>/v1</code>.
         </div>
@@ -1719,7 +1719,7 @@ const CoreFramework = (() => {
     .define("connectors.autoTransfer",true,{validate:v=>typeof v==="boolean"})
     .define("state.persist",true,{validate:v=>typeof v==="boolean"})
     .define("odds.apiKey","",{secret:true,validate:v=>typeof v==="string"})
-    .define("odds.baseUrl","https://parlay-api.com/v1",{validate:v=>typeof v==="string"&&/^https?:\/\//i.test(v.trim())})
+    .define("odds.baseUrl","https://parlay-proxy.mlb-odds-parlay.workers.dev/v1",{validate:v=>typeof v==="string"&&/^https?:\/\//i.test(v.trim())})
     .define("odds.region","us",{validate:v=>["us","us2","eu","uk","au"].includes(v)})
     .define("odds.format","american",{validate:v=>["american","decimal"].includes(v)});
   config.load();
@@ -3638,13 +3638,13 @@ function setParlayApiKey(value,source="ParlayAPI:UI"){
 
 function getParlayApiBaseUrl(){
   const input=qs("parlayApiBaseUrl");
-  let configured="https://parlay-api.com/v1";
+  let configured="https://parlay-proxy.mlb-odds-parlay.workers.dev/v1";
   try{
     configured=String(AppConfig.get("odds.baseUrl")||configured).trim();
   }catch(error){
     RuntimeAudit.record("warning",`odds.baseUrl fallback used: ${error.message}`);
   }
-  const raw=String(input?.value||configured||"https://parlay-api.com/v1")
+  const raw=String(input?.value||configured||"https://parlay-proxy.mlb-odds-parlay.workers.dev/v1")
     .trim()
     .replace(/\/+$/,"");
   if(input && input.value!==raw)input.value=raw;
@@ -5828,7 +5828,7 @@ ProviderManager.register({
   id:"parlayApi",
   name:"ParlayAPI",
   type:"sportsbook-odds",
-  metadata:{baseUrl:"https://parlay-api.com/v1",authentication:"X-API-Key"},
+  metadata:{baseUrl:"https://parlay-proxy.mlb-odds-parlay.workers.dev/v1",authentication:"X-API-Key"},
   request:async({operation,params={},signal})=>{
     if(operation==="health"){
       const payload=await parlayFetchJson({regions:"us",oddsFormat:"american",markets:"h2h"},signal);
