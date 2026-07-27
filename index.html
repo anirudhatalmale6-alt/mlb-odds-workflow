@@ -3949,9 +3949,9 @@ async function loadLiveOdds(){
       const teamMatch=(events||[]).find(e=>oddsTeamKey(e.away_team)===away && oddsTeamKey(e.home_team)===home);
       let hint;
       if(teamMatch){
-        hint=`ParlayAPI DOES have ${game.away.team} at ${game.home.team}, but at ${formatSlateTime(teamMatch.commence_time)} - while your selected game is set to ${game.gameDate?formatSlateTime(game.gameDate):"an unknown time"}. The dates don't line up, so odds can't be attached. Pick the matching game from today's live slate (odds are only published for ParlayAPI's current game window).`;
+        hint=`ParlayAPI DOES have ${game.away.team} at ${game.home.team}, but scheduled for ${formatMatchDateTime(teamMatch.commence_time)} - while your selected game is set to ${formatMatchDateTime(game.gameDate)}. The dates don't line up, so odds can't be attached. Pick the matching game from today's live slate (odds are only published for ParlayAPI's current game window).`;
       }else{
-        const avail=(events||[]).map(e=>`${e.away_team} at ${e.home_team} (${formatSlateTime(e.commence_time)})`);
+        const avail=(events||[]).map(e=>`${e.away_team} at ${e.home_team} (${formatMatchDateTime(e.commence_time)})`);
         hint=`Your selected game (${game.away.team} at ${game.home.team}) isn't in ParlayAPI's current odds window. ParlayAPI currently has open odds for these ${events.length} games only: ${avail.join("; ")}. Select one of these from the Live Slate Engine.`;
       }
       liveOddsLog(`No odds match for your selection - ${hint}`);
@@ -4266,6 +4266,17 @@ function formatSlateTime(dateString){
   const tz=qs("slateTimeZone").value;
   const options={hour:"numeric",minute:"2-digit"};
   if(tz!=="local")options.timeZone=tz;
+  return new Intl.DateTimeFormat("en-US",options).format(date);
+}
+// Like formatSlateTime but includes the DATE - used in the odds-match diagnostic so a day-off
+// mismatch is obvious (formatSlateTime shows time only, which makes a 24h gap look identical).
+function formatMatchDateTime(dateString){
+  if(!dateString)return "an unknown date/time";
+  const date=new Date(dateString);
+  if(Number.isNaN(date.getTime()))return "an unknown date/time";
+  const tz=qs("slateTimeZone")?.value;
+  const options={weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"};
+  if(tz&&tz!=="local")options.timeZone=tz;
   return new Intl.DateTimeFormat("en-US",options).format(date);
 }
 function normalizedGameId(game){
