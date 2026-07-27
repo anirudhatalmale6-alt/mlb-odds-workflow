@@ -3941,7 +3941,21 @@ async function loadLiveOdds(){
     liveOddsState.rawEvents=events;
     liveOddsState.matchedEvent=matchOddsEvent(events);
     if(!liveOddsState.matchedEvent){
-      throw new Error("No ParlayAPI event matched the selected home team, away team, and commence time.");
+      // ParlayAPI only publishes odds for games in its current window (roughly today's / imminent
+      // games with open betting markets). If the selected game isn't one of them - almost always a
+      // date mismatch, e.g. you selected tomorrow's game but only today's is live - a bare "no match"
+      // is useless. Instead we tell the user exactly what IS available so they can pick a valid game.
+      const away=oddsTeamKey(game.away.team), home=oddsTeamKey(game.home.team);
+      const teamMatch=(events||[]).find(e=>oddsTeamKey(e.away_team)===away && oddsTeamKey(e.home_team)===home);
+      let hint;
+      if(teamMatch){
+        hint=`ParlayAPI DOES have ${game.away.team} at ${game.home.team}, but at ${formatSlateTime(teamMatch.commence_time)} - while your selected game is set to ${game.gameDate?formatSlateTime(game.gameDate):"an unknown time"}. The dates don't line up, so odds can't be attached. Pick the matching game from today's live slate (odds are only published for ParlayAPI's current game window).`;
+      }else{
+        const avail=(events||[]).map(e=>`${e.away_team} at ${e.home_team} (${formatSlateTime(e.commence_time)})`);
+        hint=`Your selected game (${game.away.team} at ${game.home.team}) isn't in ParlayAPI's current odds window. ParlayAPI currently has open odds for these ${events.length} games only: ${avail.join("; ")}. Select one of these from the Live Slate Engine.`;
+      }
+      liveOddsLog(`No odds match for your selection - ${hint}`);
+      throw new Error(hint);
     }
 
     liveOddsState.prices=normalizeProviderEvents([liveOddsState.matchedEvent],format);
