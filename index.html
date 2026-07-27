@@ -5289,7 +5289,10 @@ qs("oddsProvider").onchange=()=>{
 };
 updateOddsSelectedGame();
 
-const defaultSlateDate=new Date(); defaultSlateDate.setDate(defaultSlateDate.getDate()+1);
+// Default the slate to TODAY, not tomorrow. ParlayAPI only publishes odds for the current
+// game window (today's games), so defaulting to tomorrow guaranteed that every freshly loaded
+// slate game was a day ahead of ParlayAPI's feed and could never be matched to live odds.
+const defaultSlateDate=new Date();
 qs("slateDate").value=defaultSlateDate.toISOString().slice(0,10);
 qs("loadLiveSlate").onclick=loadLiveSlate;
 qs("loadSlateDemo").onclick=loadSlateDemo;
